@@ -1,0 +1,100 @@
+#include <math.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+// === Konfigurasi Pin dan Konstanta ===
+const int sensorPin = A1;
+const int relayPin = 3;
+const int buttonPin = 4;
+const int buzzerPin = 5;
+
+const float Vref = 3.3;                 // Tegangan referensi sensor
+const int jumlahSampel = 100;
+const unsigned long durasiRelay = 3000;
+
+bool relayAktif = false;
+bool pengukuranSiap = false;
+unsigned long waktuAktifRelay = 0;
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(sensorPin, INPUT);
+  pinMode(relayPin, OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
+  pinMode(buzzerPin, OUTPUT);
+
+  digitalWrite(relayPin, HIGH);  // Relay OFF (aktif LOW)
+  digitalWrite(buzzerPin, LOW);  // Buzzer OFF
+
+  lcd.init();
+  lcd.backlight();
+  lcd.setCursor(0, 0);
+  lcd.print("UV Sensor Siap");
+}
+
+void loop() {
+  // === Deteksi tombol ===
+  if (digitalRead(buttonPin) == LOW && !relayAktif) {
+    relayAktif = true;
+    waktuAktifRelay = millis();
+    digitalWrite(relayPin, LOW);   // Hidupkan LED
+    pengukuranSiap = true;
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Mengukur...");
+  }
+
+  // === Jalankan pengukuran hanya sekali per tombol ===
+  if (pengukuranSiap && millis() - waktuAktifRelay >= durasiRelay) {
+    digitalWrite(relayPin, HIGH);  // Matikan LED lebih dulu
+
+    // Lakukan pengukuran
+    float totalADC = 0;
+    for (int i = 0; i < jumlahSampel; i++) {
+      totalADC += analogRead(sensorPin);
+      delay(50);
+    }
+
+    float rataADC = totalADC / jumlahSampel;
+    float tegangan = (rataADC * Vref) / 1023.0;
+    float intensitasUV = 22.3051 * tegangan - 2.3185;
+    float konsentrasi =(tegangan - 0.5927) / (-0.0039) 
+
+    Serial.print("Tegangan: "); Serial.print(tegangan, 3);
+    Serial.print(" | Konsentrasi: "); Serial.println(konsentrasi, 3);
+
+    // Aktifkan buzzer jika positif
+    bool positif = konsentrasi > 0;
+    if (positif) {
+      digitalWrite(buzzerPin, HIGH);
+      delay(1000);
+      digitalWrite(buzzerPin, LOW);
+    }
+
+    // === Tampilkan hasil ke LCD ===
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("HQ: ");
+    lcd.print(positif ? "ADA" : "TIDAK");
+
+    lcd.setCursor(0, 1);
+    lcd.print("Kons: ");
+    lcd.print(konsentrasi, 2);
+    lcd.print(" ppm");
+
+    delay(10000); // waktu tampil
+
+    // Reset ke tampilan awal
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("UV Sensor Siap");
+
+    pengukuranSiap = false;
+    relayAktif = false;
+  }
+
+  delay(100);
+}
