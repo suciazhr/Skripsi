@@ -4,7 +4,6 @@
 const int sensorPin = A1;                // Pin analog untuk sensor GUVA-S12SD
 const float Vref = 3.3;                  // Tegangan referensi Arduino
 const int jumlahSampel = 100;            // Jumlah pembacaan untuk averaging
-const float intensitasAwal = 8;      // Intensitas awal (
 
 void setup() {
   Serial.begin(9600);
@@ -30,14 +29,6 @@ void loop() {
   float teganganmV = tegangan * 1000.0;
 
 
-  // === Hitung Absorbansi ===
-  float absorbansi = 0;
-  if (intensitasUV > 0) {
-    absorbansi = log10(intensitasAwal / intensitasUV);
-  } else {
-    absorbansi = 0;  // Hindari log10(0) jika sensor belum membaca nilai valid
-  }
-
   // === Tampilkan hasil ke Serial Monitor ===
   Serial.print("ADC: ");
   Serial.print(rataADC);
@@ -47,8 +38,7 @@ void loop() {
   Serial.print(teganganmV, 1);
   Serial.print(" mV | Intensitas: ");
   Serial.print(intensitasUV, 2);
-  Serial.print(" | Absorbansi: ");
-  Serial.println(absorbansi, 3);
+
 
   delay(1000); // jeda antar pembacaan
 }
